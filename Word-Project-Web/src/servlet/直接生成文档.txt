@@ -1,0 +1,122 @@
+package servlet;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import Java2Word.Jacob.JacobTest;
+import Similar.CosineSimilarAlgorithm;
+import Similar.JsoupUtil;
+import dao.add_dao;
+import information.infor;
+
+
+/**
+ * Servlet implementation class OutputServlet
+ */
+@WebServlet("/OutputServlet")
+public class OutputServlet extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+       
+    /**
+     * @see HttpServlet#HttpServlet()
+     */
+    public OutputServlet() {
+        super();
+        // TODO Auto-generated constructor stub
+    }
+
+	/**
+	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 */
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		
+		String title1 = request.getParameter("title");
+		//System.out.println(title1);
+		List<infor> list = new ArrayList<infor>();
+    	add_dao dao = new add_dao();
+    	list = dao.select(title1);
+    
+
+		for(infor lists:list )
+		{
+			String YWContent = lists.getContent();
+		
+    	int len = list.size();
+    	//System.out.println("大小是"+len);
+    	String []content = new String[len];
+    	String []title = new String[len];
+    	for(int i=0;i<len;i++) {
+    		//System.out.println(list.get(i).getTitle());
+    		if(list.get(i).getTitle().contains("（")) {
+    			String[] split = list.get(i).getTitle().split("（");
+    			title[i] = split[0];
+    			//System.out.println(title[i]);
+    		}else {
+    			title[i] = list.get(i).getTitle();
+    		}
+			//System.out.println(title[i]);
+    	}
+    	for(int i=0;i<len;i++) {
+    		 content[i]  = JsoupUtil.URLLoader("https://baike.baidu.com/item/"+title[i]);
+    	     if(content[i]==null) {
+    	    	 content[i] = list.get(i).getKeyword();
+    	     }
+    		System.out.println("查询到的结果是:"+content[i]);
+    	}
+    	for(int i=0;i<len;i++) {
+    		double result = CosineSimilarAlgorithm.cosSimilarityByString(content[i],list.get(i).getContent());
+    		list.get(i).setSimilar(String.valueOf(result));
+    		//System.out.println(result);
+    		System.out.println(list.get(i).getContent());
+    		String similar=list.get(i).getSimilar();
+    		//System.out.println(similar);
+    		dao.AddSimilar(title[i],similar);
+    		
+	  	      System.out.println("start!");
+	//	      System.out.println(System.getProperty("java.library.path")); 
+		      JacobTest jac = new JacobTest();
+		      jac.openWord(true);
+		      jac.createNewDocument();
+		      jac.insertTitle(title1);
+		      jac.insertOperator("系统操作人：赵春辉");
+		      jac.insertSimilar(similar);
+		      jac.insertYWTitle("原文内容："+YWContent);
+		      jac.insertBKText("查重对比文库内容:"+content[i]);
+		      jac.saveFileAs("D:\\文件导出\\"+title1+".doc");
+		      //jac.ins
+		      try{
+		          jac.closeDocument(null);
+		      }catch(NullPointerException e){
+		          //捕捉空指针异常，什么也不做
+		      }
+		      jac.closeWord();
+		      System.out.println("end!");
+    	}
+
+    
+		}
+      response.sendRedirect("../OutFile.jsp"); 
+	response.getWriter().append("Served at: ").append(request.getContextPath());
+	}
+
+	/**
+	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 */
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		doGet(request, response);
+	}
+
+}
